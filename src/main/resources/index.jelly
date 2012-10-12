@@ -2,5 +2,5 @@
   This view is used to render the installed plugins page.
 -->
 <div>
-  This plugin is a sample to explain how to write a Jenkins plugin.
+  VirtualBox setup and teardown plugin. Provides pre- and postbuild steps to execute system vbox scripts.
 </div>
