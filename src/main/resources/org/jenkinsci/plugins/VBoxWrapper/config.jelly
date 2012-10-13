@@ -1,0 +1,24 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+	<f:entry title="${%VBox setup}">
+		<f:block>
+			<div style="padding-left: 2em">
+				<f:hetero-list name="vboxSetupSteps" hasHeader="true"
+					descriptors="${h.getBuilderDescriptors(it)}" items="${instance.vboxSetupSteps}"
+					addCaption="${%Add build step}" />
+			</div>
+		</f:block>
+	</f:entry>
+
+	<f:entry title="${%VBox teardown}">
+		<f:block>
+			<div style="padding-left: 2em">
+				<f:hetero-list name="vboxTeardownSteps" hasHeader="true"
+					descriptors="${h.getBuilderDescriptors(it)}" items="${instance.vboxTeardownSteps}"
+					addCaption="${%Add build step}" />
+			</div>
+		</f:block>
+	</f:entry>
+
+</j:jelly>
