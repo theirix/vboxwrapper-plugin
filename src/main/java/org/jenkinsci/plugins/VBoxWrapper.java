@@ -45,8 +45,8 @@ import org.kohsuke.stapler.StaplerRequest;
 @SuppressWarnings("rawtypes")
 public class VBoxWrapper extends BuildWrapper {
 
-	/* Initial timeout, ratio is 1.5 */
-	private static final int CONNECT_INITIAL_TIMEOUT = 3;
+	/* Initial timeout */
+	private static final int CONNECT_INITIAL_TIMEOUT = 10;
 
 	/* Retry count to connect to the slave */
 	private static final int CONNECT_RETRY_COUNT = 10;
@@ -208,7 +208,7 @@ public class VBoxWrapper extends BuildWrapper {
 							}
 						}
 						
-						timeout *= 1.5;
+						timeout *= 1.2;
 					}
 					return false;
 				}
