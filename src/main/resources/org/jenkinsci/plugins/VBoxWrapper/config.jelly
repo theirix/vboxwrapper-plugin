@@ -2,7 +2,7 @@
 	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
 	<!-- j:if test="${instance.virtualSlaves.size() > 0}"-->
-		<f:entry name="virtualSlaves" title="${Virtual nodes}">
+		<f:entry name="virtualSlaves" title="${%Virtual nodes}">
 			<select name="virtualSlaves" multiple="multiple" size="5" style="min-width: 200px;">
 				<j:invokeStatic className="org.jenkinsci.plugins.VBoxWrapper"
 					method="getSlaveNames" var="allNodes" />

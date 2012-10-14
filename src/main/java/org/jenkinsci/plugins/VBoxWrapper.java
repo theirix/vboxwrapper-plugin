@@ -3,17 +3,25 @@ package org.jenkinsci.plugins;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.BuildListener;
-import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Computer;
 import hudson.model.Node;
+import hudson.slaves.SlaveComputer;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 import hudson.tasks.Shell;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
@@ -37,10 +45,13 @@ import org.kohsuke.stapler.StaplerRequest;
 @SuppressWarnings("rawtypes")
 public class VBoxWrapper extends BuildWrapper {
 
+	/* Retry count to connect to the slave */
+	private static final int CONNECT_RETRY_COUNT = 10;
+	
 	private final List<String> virtualSlaves;
 	private final boolean useSetup;
 	private final boolean useTeardown;
-	
+
 	@DataBoundConstructor
 	public VBoxWrapper(List<String> virtualSlaves, boolean useSetup,
 			boolean useTeardown) {
@@ -74,15 +85,15 @@ public class VBoxWrapper extends BuildWrapper {
 
 		/*
 		 * @see
-		 * hudson.tasks.BuildWrapper.Environment#tearDown(hudson.model.AbstractBuild
-		 * , hudson.model.BuildListener)
+		 * hudson.tasks.BuildWrapper.Environment#tearDown(hudson.model.AbstractBuild, hudson.model.BuildListener)
 		 */
 		@Override
 		public boolean tearDown(AbstractBuild build, BuildListener listener)
 				throws IOException, InterruptedException {
 
 			if (isUseTeardown())
-				invokeVBoxCommand(getDescriptor().getTeardownCommand(), build, launcher, listener);
+				invokeVBoxCommand(getDescriptor().getTeardownCommand(), build,
+						launcher, listener);
 			return true;
 		}
 
@@ -93,22 +104,27 @@ public class VBoxWrapper extends BuildWrapper {
 			BuildListener listener) throws IOException, InterruptedException {
 
 		dumpSettings(listener);
-		
-		if (isUseSetup())
-			invokeVBoxCommand(getDescriptor().getSetupCommand(), build, launcher, listener);
-		
+
+		if (isUseSetup()) {
+			invokeVBoxCommand(getDescriptor().getSetupCommand(), build,
+					launcher, listener);
+			awaitNodes(listener);
+		}
+
 		return new VBoxEnvironment(launcher);
 	}
-	
-	/*
+
+	/**
 	 * Invoke shell command on master to setup/teardown selected virtual machines
 	 */
-	private void invokeVBoxCommand (String body, AbstractBuild build, Launcher launcher, BuildListener listener) throws InterruptedException {
+	private void invokeVBoxCommand(String body, AbstractBuild build,
+			Launcher launcher, BuildListener listener)
+			throws InterruptedException {
 		if (body == null || body.equals(""))
 			return;
-		
+
 		StringBuilder sb = new StringBuilder(body);
-		for (String slave: getVirtualSlaves()) {
+		for (String slave : getVirtualSlaves()) {
 			sb.append(" ");
 			sb.append(slave);
 		}
@@ -116,58 +132,114 @@ public class VBoxWrapper extends BuildWrapper {
 		listener.getLogger().println("Expect to launch command " + commandLine);
 		Shell shell = new Shell(commandLine);
 		if (!shell.perform(build, launcher, listener))
-			listener.error("VBox setup shell failed");		
+			listener.error("VBox setup shell failed");
 	}
 
 	private void dumpSettings(BuildListener listener) {
 		listener.getLogger().format("useSetup %b\n", isUseSetup());
 		listener.getLogger().format("useTeardown %b\n", isUseTeardown());
-		listener.getLogger().format("setup command %s\n", getDescriptor().getSetupCommand());
-		listener.getLogger().format("teardown command %s\n", getDescriptor().getTeardownCommand());
+		listener.getLogger().format("setup command %s\n",
+				getDescriptor().getSetupCommand());
+		listener.getLogger().format("teardown command %s\n",
+				getDescriptor().getTeardownCommand());
 	}
 
-	/*private void invokeBuildSteps(AbstractBuild build, Launcher launcher,
-			ArrayList<BuildStep> buildSteps, BuildListener listener)
-			throws InterruptedException, IOException {
+	/**
+	 * Await all specified in settings nodes to became online
+	 * Postcondition: all nodes are online
+	 * 
+	 * @param listener
+	 * @throws IOException 
+	 */
+	private void awaitNodes(final BuildListener listener) throws IOException {
 
-		if (virtualSlaves != null) {
-			for (String slaveName : virtualSlaves) {
-				listener.getLogger().format("Using slave: %s\n", slaveName);
+		/* Collect offline nodes */
+		ArrayList<SlaveComputer> computers = new ArrayList<SlaveComputer>();
+		for (String slave : getVirtualSlaves()) {
+			Computer computer = Jenkins.getInstance().getComputer(slave);
+			if (computer == null) {
+				throw new IOException("Cannot find registered slave "
+						+ slave);
+			}
+			if (computer instanceof SlaveComputer && computer.isOffline()) {
+				computers.add((SlaveComputer) computer);
 			}
 		}
-
-		if (buildSteps == null) {
-			listener.getLogger().println("No build steps declared");
+		
+		if (computers.isEmpty())
 			return;
+
+		List<Callable<Boolean>> callables = new ArrayList<Callable<Boolean>>();
+		for (final SlaveComputer computer : computers) {
+			callables.add(new Callable<Boolean>() {
+				/**
+				 * Slave reconnect attempts
+				 * 
+				 * @return does a slave became online
+				 */
+				public Boolean call() throws Exception {
+					/* Timeout in seconds */
+					int timeout = 3;
+					for (int retry = 0; retry < CONNECT_RETRY_COUNT; ++retry) {
+
+						if (computer.isOnline())
+							return true;
+
+						synchronized (listener) {
+							listener.getLogger().format(
+									"Forcing reconnect to %s\n",
+									computer.getName());
+						}
+						Future future = computer.connect(true);
+						try {
+							future.get(timeout, TimeUnit.SECONDS);
+						} catch (Exception e) {
+							synchronized (listener) {
+								listener.getLogger()
+										.format("Connect wait timeouted or failed: %s\n",e.toString());
+							}
+						}
+						
+						timeout *= 1.4;
+					}
+					return false;
+				}
+
+			});
 		}
 
-		for (BuildStep bs : buildSteps) {
-			listener.getLogger().format("Invoking prebuild step '%s'\n",
-					getBuildStepName(bs));
-			if (!bs.prebuild(build, listener)) {
-				listener.getLogger().println(
-						MessageFormat.format("{0} : {1} failed",
-								build.toString(), getBuildStepName(bs)));
-				return;
+		/* Start tasks */
+		ExecutorService es = Executors.newFixedThreadPool(computers.size());
+		try {
+			List<Future<Boolean>> futures = es.invokeAll(callables);
+			if (!futureAll(futures)) {
+				throw new IOException("Some nodes are still offline");
 			}
+		} catch (Exception e) {
+			throw new IOException("Node await failed", e);
 		}
-
-		for (BuildStep bs : buildSteps) {
-			listener.getLogger().format("Invoking build step '%s'\n",
-					getBuildStepName(bs));
-			bs.perform(build, launcher, listener);
-		}
+		listener.getLogger().format("Successfully awaited %d nodes", computers.size());
 	}
 
-	private String getBuildStepName(BuildStep bs) {
-		if (bs instanceof Describable<?>) {
-			return ((Describable<?>) bs).getDescriptor().getDisplayName();
-		} else {
-			return bs.getClass().getSimpleName();
+	/**
+	 * Returns true if all boolean futures evaluates to true
+	 * Waits for all of them before return
+	 * @param futures
+	 * @return logical and of future results
+	 */
+	private Boolean futureAll(final Collection<Future<Boolean>> futures)
+			throws InterruptedException, ExecutionException {
+		boolean result = true;
+		for (Future<Boolean> future : futures) {
+			result = result && future.get();
 		}
+		return result;
+	}
 
-	}*/
-
+	/**
+	 * Finds all slave machine names
+	 * @return list of names
+	 */
 	public static List<String> getSlaveNames() {
 		final List<Node> nodes = Jenkins.getInstance().getNodes();
 		List<String> test = new ArrayList<String>();
@@ -194,7 +266,6 @@ public class VBoxWrapper extends BuildWrapper {
 
 		private String setupCommand;
 		private String teardownCommand;
-		
 
 		public DescriptorImpl() {
 			super();
@@ -209,7 +280,6 @@ public class VBoxWrapper extends BuildWrapper {
 			return teardownCommand;
 		}
 
-		
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject json)
 				throws FormException {
