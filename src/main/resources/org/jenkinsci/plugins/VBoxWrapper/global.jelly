@@ -1,0 +1,13 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+	<f:section title="${%VBox Wrapper}">
+		<f:entry title="${%Virtual machine setup command}" field="setupCommand">
+			<f:textbox />
+		</f:entry>
+		<f:entry title="${%Virtual machine teardown command}" field="teardownCommand">
+			<f:textbox />
+		</f:entry>
+	</f:section>
+
+</j:jelly>

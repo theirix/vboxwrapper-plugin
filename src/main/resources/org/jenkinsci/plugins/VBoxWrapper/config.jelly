@@ -1,24 +1,33 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
 	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
-	<f:entry title="${%VBox setup}">
-		<f:block>
-			<div style="padding-left: 2em">
-				<f:hetero-list name="vboxSetupSteps" hasHeader="true"
-					descriptors="${h.getBuilderDescriptors(it)}" items="${instance.vboxSetupSteps}"
-					addCaption="${%Add build step}" />
-			</div>
-		</f:block>
-	</f:entry>
+	<!-- j:if test="${instance.virtualSlaves.size() > 0}"-->
+		<f:entry name="virtualSlaves" title="${Virtual nodes}">
+			<select name="virtualSlaves" multiple="multiple" size="5" style="min-width: 200px;">
+				<j:invokeStatic className="org.jenkinsci.plugins.VBoxWrapper"
+					method="getSlaveNames" var="allNodes" />
+				<j:forEach var="aNode" items="${allNodes}" varStatus="loop">
+					<j:choose>
+						<j:when test="${instance.virtualSlaves.contains(aNode)}">
+							<option value="${aNode}" selected="selected">${aNode}</option>
+						</j:when>
+						<j:otherwise>
+							<option value="${aNode}">${aNode}</option>
+						</j:otherwise>
+					</j:choose>
+				</j:forEach>
+			</select>
 
-	<f:entry title="${%VBox teardown}">
-		<f:block>
-			<div style="padding-left: 2em">
-				<f:hetero-list name="vboxTeardownSteps" hasHeader="true"
-					descriptors="${h.getBuilderDescriptors(it)}" items="${instance.vboxTeardownSteps}"
-					addCaption="${%Add build step}" />
-			</div>
-		</f:block>
-	</f:entry>
+		</f:entry>
+	<!--/j:if -->
+
+       <f:entry title="${%Use setup}" field="useSetup">
+            <f:checkbox />
+        </f:entry>
+        
+       <f:entry title="${%Use teardown}" field="useTeardown">
+            <f:checkbox />
+        </f:entry>
+
 
 </j:jelly>
