@@ -45,9 +45,13 @@ import org.kohsuke.stapler.StaplerRequest;
 @SuppressWarnings("rawtypes")
 public class VBoxWrapper extends BuildWrapper {
 
+	/* Initial timeout, ratio is 1.5 */
+	private static final int CONNECT_INITIAL_TIMEOUT = 3;
+
 	/* Retry count to connect to the slave */
 	private static final int CONNECT_RETRY_COUNT = 10;
 	
+	/* Jelly bindings */
 	private final List<String> virtualSlaves;
 	private final boolean useSetup;
 	private final boolean useTeardown;
@@ -83,9 +87,9 @@ public class VBoxWrapper extends BuildWrapper {
 			this.launcher = launcher;
 		}
 
-		/*
-		 * @see
-		 * hudson.tasks.BuildWrapper.Environment#tearDown(hudson.model.AbstractBuild, hudson.model.BuildListener)
+		/**
+		 * Teardown build wrapper environment.
+		 * Turn off virtual machines
 		 */
 		@Override
 		public boolean tearDown(AbstractBuild build, BuildListener listener)
@@ -99,6 +103,10 @@ public class VBoxWrapper extends BuildWrapper {
 
 	}
 
+	/**
+	 * Setup build wrapper environment.
+	 * It is the time to set up machines
+	 */
 	@Override
 	public Environment setUp(AbstractBuild build, Launcher launcher,
 			BuildListener listener) throws IOException, InterruptedException {
@@ -116,6 +124,7 @@ public class VBoxWrapper extends BuildWrapper {
 
 	/**
 	 * Invoke shell command on master to setup/teardown selected virtual machines
+	 * @param body actual command to execute, parameters are appended
 	 */
 	private void invokeVBoxCommand(String body, AbstractBuild build,
 			Launcher launcher, BuildListener listener)
@@ -148,8 +157,7 @@ public class VBoxWrapper extends BuildWrapper {
 	 * Await all specified in settings nodes to became online
 	 * Postcondition: all nodes are online
 	 * 
-	 * @param listener
-	 * @throws IOException 
+	 * @throws IOException is thrown if any of nodes is still offline 
 	 */
 	private void awaitNodes(final BuildListener listener) throws IOException {
 
@@ -179,7 +187,7 @@ public class VBoxWrapper extends BuildWrapper {
 				 */
 				public Boolean call() throws Exception {
 					/* Timeout in seconds */
-					int timeout = 3;
+					int timeout = CONNECT_INITIAL_TIMEOUT;
 					for (int retry = 0; retry < CONNECT_RETRY_COUNT; ++retry) {
 
 						if (computer.isOnline())
@@ -187,8 +195,8 @@ public class VBoxWrapper extends BuildWrapper {
 
 						synchronized (listener) {
 							listener.getLogger().format(
-									"Forcing reconnect to %s\n",
-									computer.getName());
+									"Reconnecting to %s, try %d of %d...\n",
+									computer.getName(), retry+1, CONNECT_RETRY_COUNT);
 						}
 						Future future = computer.connect(true);
 						try {
@@ -196,11 +204,11 @@ public class VBoxWrapper extends BuildWrapper {
 						} catch (Exception e) {
 							synchronized (listener) {
 								listener.getLogger()
-										.format("Connect wait timeouted or failed: %s\n",e.toString());
+										.format("Connect timed out or failed: %s\n",e.getMessage());
 							}
 						}
 						
-						timeout *= 1.4;
+						timeout *= 1.5;
 					}
 					return false;
 				}
@@ -218,7 +226,7 @@ public class VBoxWrapper extends BuildWrapper {
 		} catch (Exception e) {
 			throw new IOException("Node await failed", e);
 		}
-		listener.getLogger().format("Successfully awaited %d nodes", computers.size());
+		listener.getLogger().format("Successfully awaited %d nodes\n", computers.size());
 	}
 
 	/**
@@ -280,6 +288,9 @@ public class VBoxWrapper extends BuildWrapper {
 			return teardownCommand;
 		}
 
+		/**
+		 * Load a descriptor from json and saves global settings.
+		 */
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject json)
 				throws FormException {
