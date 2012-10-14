@@ -46,10 +46,10 @@ import org.kohsuke.stapler.StaplerRequest;
 public class VBoxWrapper extends BuildWrapper {
 
 	/* Initial timeout */
-	private static final int CONNECT_INITIAL_TIMEOUT = 10;
+	private static final int CONNECT_INITIAL_TIMEOUT = 45;
 
 	/* Retry count to connect to the slave */
-	private static final int CONNECT_RETRY_COUNT = 10;
+	private static final int CONNECT_RETRY_COUNT = 5;
 	
 	/* Jelly bindings */
 	private final List<String> virtualSlaves;
