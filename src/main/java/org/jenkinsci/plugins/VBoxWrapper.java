@@ -7,6 +7,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Computer;
 import hudson.model.Node;
+import hudson.slaves.OfflineCause;
 import hudson.slaves.SlaveComputer;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
@@ -46,11 +47,11 @@ import org.kohsuke.stapler.StaplerRequest;
 public class VBoxWrapper extends BuildWrapper {
 
 	/* Initial timeout */
-	private static final int CONNECT_INITIAL_TIMEOUT = 45;
+	private static final int CONNECT_TIMEOUT = 45;
 
-	/* Retry count to connect to the slave */
-	private static final int CONNECT_RETRY_COUNT = 5;
-	
+	/* Total timeout */
+	private static final int CONNECT_TOTAL_TIMEOUT = 3 * 60;
+
 	/* Jelly bindings */
 	private final List<String> virtualSlaves;
 	private final boolean useSetup;
@@ -83,7 +84,7 @@ public class VBoxWrapper extends BuildWrapper {
 
 		private final Launcher launcher;
 
-		public VBoxEnvironment(Launcher launcher) {
+		public VBoxEnvironment(final Launcher launcher) {
 			this.launcher = launcher;
 		}
 
@@ -95,9 +96,12 @@ public class VBoxWrapper extends BuildWrapper {
 		public boolean tearDown(AbstractBuild build, BuildListener listener)
 				throws IOException, InterruptedException {
 
-			if (isUseTeardown())
+			if (isUseTeardown()) {
+				disconnectSlaves(listener);
 				invokeVBoxCommand(getDescriptor().getTeardownCommand(), build,
-						launcher, listener);
+						launcher, listener);				
+			}
+				
 			return true;
 		}
 
@@ -116,7 +120,7 @@ public class VBoxWrapper extends BuildWrapper {
 		if (isUseSetup()) {
 			invokeVBoxCommand(getDescriptor().getSetupCommand(), build,
 					launcher, listener);
-			awaitNodes(listener);
+			connectSlaves(listener);
 		}
 
 		return new VBoxEnvironment(launcher);
@@ -153,15 +157,12 @@ public class VBoxWrapper extends BuildWrapper {
 				getDescriptor().getTeardownCommand());
 	}
 
-	/**
-	 * Await all specified in settings nodes to became online
-	 * Postcondition: all nodes are online
-	 * 
-	 * @throws IOException is thrown if any of nodes is still offline 
-	 */
-	private void awaitNodes(final BuildListener listener) throws IOException {
 
-		/* Collect offline nodes */
+	/** Find slave computers with given status
+	 * @return list of slave computers
+	 * @throws IOException
+	 */
+	private ArrayList<SlaveComputer> getSlaveComputers(boolean collectOffline) throws IOException {
 		ArrayList<SlaveComputer> computers = new ArrayList<SlaveComputer>();
 		for (String slave : getVirtualSlaves()) {
 			Computer computer = Jenkins.getInstance().getComputer(slave);
@@ -169,11 +170,44 @@ public class VBoxWrapper extends BuildWrapper {
 				throw new IOException("Cannot find registered slave "
 						+ slave);
 			}
-			if (computer instanceof SlaveComputer && computer.isOffline()) {
+			if (computer instanceof SlaveComputer && computer.isOffline() == collectOffline) {
 				computers.add((SlaveComputer) computer);
 			}
 		}
+		return computers;
+	}
+	
+	/**
+	 * Run tasks in parallel
+	 * Returns if all callables are evaluated to true
+	 * 		
+	 * @throws IOException if any callable failed
+	 */
+	private void executeTasks(ArrayList<SlaveComputer> computers,
+			List<Callable<Boolean>> callables, final BuildListener listener)
+			throws IOException {
+		/* Start tasks */
+		ExecutorService es = Executors.newFixedThreadPool(computers.size());
+		try {
+			List<Future<Boolean>> futures = es.invokeAll(callables);
+			if (!futureAll(futures)) {
+				throw new IOException("Some slaves are still in a previous state");
+			}
+		} catch (Exception e) {
+			throw new IOException("Node waiting failed", e);
+		}
+		listener.getLogger().format("Successfully awaited %d slaves\n", computers.size());
+	}
+	
+	/**
+	 * Disconnect all specified in settings slaves
+	 * Postcondition: all slaves are offline or an exception thrown
+	 *  
+	 */
+	private void disconnectSlaves(final BuildListener listener) throws IOException {
 		
+		/* Collect online slaves */
+		ArrayList<SlaveComputer> computers = getSlaveComputers(false);
 		if (computers.isEmpty())
 			return;
 
@@ -183,50 +217,108 @@ public class VBoxWrapper extends BuildWrapper {
 				/**
 				 * Slave reconnect attempts
 				 * 
-				 * @return does a slave became online
+				 * @return does a slave become online
 				 */
 				public Boolean call() throws Exception {
-					/* Timeout in seconds */
-					int timeout = CONNECT_INITIAL_TIMEOUT;
-					for (int retry = 0; retry < CONNECT_RETRY_COUNT; ++retry) {
-
-						if (computer.isOnline())
-							return true;
-
-						synchronized (listener) {
-							listener.getLogger().format(
-									"Reconnecting to %s, try %d of %d...\n",
-									computer.getName(), retry+1, CONNECT_RETRY_COUNT);
-						}
-						Future future = computer.connect(true);
-						try {
-							future.get(timeout, TimeUnit.SECONDS);
-						} catch (Exception e) {
-							synchronized (listener) {
-								listener.getLogger()
-										.format("Connect timed out or failed: %s\n",e.getMessage());
-							}
-						}
-						
-						timeout *= 1.2;
+					
+					/* Disconnect at first */
+					synchronized (listener) {
+						listener.getLogger().format("Disconnecting slave %s\n",
+								computer.getName());
 					}
-					return false;
+				
+					Future future = computer.disconnect(new OfflineCause.ByCLI("disconnect to connect"));
+					try {
+						future.get(CONNECT_TIMEOUT, TimeUnit.SECONDS);
+					} catch (Exception e) {
+						synchronized (listener) {
+							listener.getLogger()
+									.format("Disconnect timed out or failed: %s\n",e.getMessage());
+						}
+					}
+					
+					return true;
 				}
 
 			});
 		}
 
-		/* Start tasks */
-		ExecutorService es = Executors.newFixedThreadPool(computers.size());
-		try {
-			List<Future<Boolean>> futures = es.invokeAll(callables);
-			if (!futureAll(futures)) {
-				throw new IOException("Some nodes are still offline");
-			}
-		} catch (Exception e) {
-			throw new IOException("Node await failed", e);
+		executeTasks(computers, callables, listener);
+	}
+
+	
+
+	/**
+	 * Await all specified in settings slaves to became online
+	 * Postcondition: all slaves are online or an exception thrown
+	 * 
+	 * @throws IOException is thrown if any slave is still offline 
+	 */
+	private void connectSlaves(final BuildListener listener) throws IOException {
+
+		/* Collect offline slaves */
+		ArrayList<SlaveComputer> computers = getSlaveComputers(true);
+		if (computers.isEmpty())
+			return;
+
+		List<Callable<Boolean>> callables = new ArrayList<Callable<Boolean>>();
+		for (final SlaveComputer computer : computers) {
+			callables.add(new Callable<Boolean>() {
+				/**
+				 * Slave reconnect attempts
+				 * 
+				 * @return does a slave become online
+				 */
+				public Boolean call() throws Exception {
+					
+					/* Disconnect at first */
+					synchronized (listener) {
+						listener.getLogger().format("Disconnecting slave %s at first\n",
+								computer.getName());
+					}
+				
+					Future future = computer.disconnect(new OfflineCause.ByCLI("disconnect to connect"));
+					try {
+						future.get(CONNECT_TIMEOUT, TimeUnit.SECONDS);
+					} catch (Exception e) {
+						synchronized (listener) {
+							listener.getLogger()
+									.format("Disconnect timed out or failed: %s\n",e.getMessage());
+						}
+					}
+					int total_elapsed = 0;
+					int retry = 0;
+					while (total_elapsed < CONNECT_TOTAL_TIMEOUT) {
+
+						if (computer.isOnline())
+							return true;
+
+						synchronized (listener) {
+							listener.getLogger().format("Reconnecting to %s, try %d...\n",
+									computer.getName(), retry+1);
+						}
+						long elapsed = System.currentTimeMillis();
+						future = computer.connect(false);
+						try {
+							future.get(CONNECT_TIMEOUT, TimeUnit.SECONDS);
+						} catch (Exception e) {
+							synchronized (listener) {
+								listener.getLogger().format("Connect timed out or failed: %s\n",
+										e.getMessage());
+							}
+						}
+						/* Who knows, how threads are measured */
+						elapsed = Math.max(1, System.currentTimeMillis() - elapsed) / 1000;
+						total_elapsed += elapsed;
+						++retry;
+					}
+					return computer.isOnline();
+				}
+
+			});
 		}
-		listener.getLogger().format("Successfully awaited %d nodes\n", computers.size());
+
+		executeTasks(computers, callables, listener);
 	}
 
 	/**
