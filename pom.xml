@@ -28,9 +28,9 @@
 	</licenses>
 
 	<scm>
-		<connection>scm:git:ssh://github.com/jenkinsci/vboxwrapper.git</connection>
-		<developerConnection>scm:git:ssh://git@github.com/jenkinsci/vboxwrapper.git</developerConnection>
-		<url>https://github.com/jenkinsci/vboxwrapper</url>
+		<connection>scm:git:git://github.com/jenkinsci/vboxwrapper-plugin.git</connection>
+		<developerConnection>scm:git:git@github.com:jenkinsci/vboxwrapper-plugin.git</developerConnection>
+		<url>https://github.com/jenkinsci/vboxwrapper-plugin</url>
 	</scm>
 
 	<developers>
