@@ -1,7 +1,7 @@
 VBoxWrapper plugin for Jenkins
 ==============================
 
-VirtualBox start/stop wrapper for [Jenkins](http://jenkins-ci.porg)
+VirtualBox start/stop wrapper for [Jenkins](http://jenkins-ci.org)
 
 Plugin provides a build wrapper for starting and stopping slaves on the virtual machine.
 Start/stop is performed by launching shell scripts (init.d, VBoxManage for example).
