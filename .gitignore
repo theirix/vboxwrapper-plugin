@@ -1,6 +1,8 @@
 work
 target
+.idea
 .project
 .settings
 .classpath
 .externalToolBuilders
+*.iml

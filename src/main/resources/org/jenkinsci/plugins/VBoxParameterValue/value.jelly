@@ -1,0 +1,14 @@
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+
+    <f:entry title="${it.name}" description="${it.description}">
+        <select name="nodes" multiple="multiple" size="1+${it.nodes.size()}" style="min-width: 200px;">
+            <j:forEach var="aNode" items="${it.nodes}" varStatus="loop">
+                <option value="${aNode}" selected="true">${aNode}</option>
+            </j:forEach>
+        </select>
+        <f:entry title="${%Node name delimiter}">
+            <f:textbox name="it.nodeDelimiter" value="${it.nodeDelimiter}"/>
+        </f:entry>
+    </f:entry>
+
+</j:jelly>

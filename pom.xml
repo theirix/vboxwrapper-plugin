@@ -1,43 +1,52 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.jenkins-ci.plugins</groupId>
-		<artifactId>plugin</artifactId>
-		<version>1.466</version>
-	</parent>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        <version>1.466</version>
+    </parent>
 
-	<artifactId>vboxwrapper</artifactId>
-	<version>1.1-SNAPSHOT</version>
-	<packaging>hpi</packaging>
+    <artifactId>vboxwrapper</artifactId>
+    <version>1.1-SNAPSHOT</version>
+    <packaging>hpi</packaging>
 
-	<url>http://wiki.jenkins-ci.org/display/JENKINS/VBoxWrapper</url>
+    <url>http://wiki.jenkins-ci.org/display/JENKINS/VBoxWrapper</url>
 
-	<build>
-		<pluginManagement>
-			<plugins />
-		</pluginManagement>
-	</build>
+    <build>
+        <pluginManagement/>
+    </build>
 
-	<licenses>
-		<license>
-			<name>BSD-style</name>
-			<url>http://www.opensource.org/licenses/bsd-license.php</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
+    <dependencies>
 
-	<scm>
-		<connection>scm:git:git://github.com/jenkinsci/vboxwrapper-plugin.git</connection>
-		<developerConnection>scm:git:git@github.com:jenkinsci/vboxwrapper-plugin.git</developerConnection>
-		<url>https://github.com/jenkinsci/vboxwrapper-plugin</url>
-	</scm>
+        <!--              <dependency>
+                    <groupId>org.jvnet.maven-jellydoc-plugin</groupId>
+                    <artifactId>maven-jellydoc-plugin</artifactId>
+                    <version>1.5</version>
+                    <scope>compile</scope>
+                    <optional>true</optional>
+                </dependency>     -->
+    </dependencies>
+    <licenses>
+        <license>
+            <name>BSD-style</name>
+            <url>http://www.opensource.org/licenses/bsd-license.php</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
-	<developers>
-		<developer>
-			<id>theirix</id>
-			<name>Eugene Seliverstov</name>
-			<email>theirix@gmail.com</email>
-		</developer>
-	</developers>
+    <scm>
+        <connection>scm:git:git://github.com/jenkinsci/vboxwrapper-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/vboxwrapper-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/vboxwrapper-plugin</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>theirix</id>
+            <name>Eugene Seliverstov</name>
+            <email>theirix@gmail.com</email>
+        </developer>
+    </developers>
 
 </project>
