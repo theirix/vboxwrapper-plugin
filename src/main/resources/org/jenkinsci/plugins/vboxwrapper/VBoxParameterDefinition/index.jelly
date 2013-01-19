@@ -6,7 +6,7 @@
         <div name="parameter" description="${it.description}">
             <input type="hidden" name="name" value="${it.name}"/>
 
-            <j:invokeStatic className="org.jenkinsci.plugins.VBoxUtils" method="getSlaveNames"
+            <j:invokeStatic className="org.jenkinsci.plugins.vboxwrapper.VBoxUtils" method="getSlaveNames"
                             var="allNodes"/>
             <select name="nodes" multiple="multiple" size="1+${allNodes.size()}" style="min-width: 200px;">
                 <j:forEach var="aNode" items="${allNodes}" varStatus="loop">

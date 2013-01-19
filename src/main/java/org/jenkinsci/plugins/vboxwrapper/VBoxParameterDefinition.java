@@ -1,4 +1,4 @@
-package org.jenkinsci.plugins;
+package org.jenkinsci.plugins.vboxwrapper;
 
 import hudson.Extension;
 import hudson.model.ParameterDefinition;

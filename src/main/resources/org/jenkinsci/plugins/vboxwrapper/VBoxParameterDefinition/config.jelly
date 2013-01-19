@@ -6,7 +6,7 @@
     <f:entry title="${%Description}">
         <f:textarea name="parameter.description" value="${instance.description}"/>
     </f:entry>
-    <f:entry title="${%Node name delimiter}">
-        <f:textbox name="parameter.nodeDelimiter" value="${instance.nodeDelimiter}"/>
+    <f:entry title="${%NodeDelimiter}">
+        <f:textbox name="parameter.nodeDelimiter" value="${instance.nodeDelimiter}" default=" "/>
     </f:entry>
 </j:jelly>

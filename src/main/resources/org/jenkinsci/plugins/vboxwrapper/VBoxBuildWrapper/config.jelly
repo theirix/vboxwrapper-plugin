@@ -1,7 +1,7 @@
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
 
-    <f:entry title="${%Virtual nodes}">
-        <j:invokeStatic className="org.jenkinsci.plugins.VBoxUtils" method="getSlaveNames"
+    <f:entry title="${%VirtualNodes}">
+        <j:invokeStatic className="org.jenkinsci.plugins.vboxwrapper.VBoxUtils" method="getSlaveNames"
                         var="allNodes"/>
         <select name="virtualSlaves" multiple="multiple" size="1+${allNodes.size()}" style="min-width: 200px;">
             <j:forEach var="aNode" items="${allNodes}" varStatus="loop">
@@ -17,11 +17,11 @@
         </select>
     </f:entry>
 
-    <f:entry title="${%Use setup}" field="useSetup">
+    <f:entry title="${%UseSetup}" field="useSetup">
         <f:checkbox/>
     </f:entry>
 
-    <f:entry title="${%Use teardown}" field="useTeardown">
+    <f:entry title="${%UseTeardown}" field="useTeardown">
         <f:checkbox/>
     </f:entry>
 

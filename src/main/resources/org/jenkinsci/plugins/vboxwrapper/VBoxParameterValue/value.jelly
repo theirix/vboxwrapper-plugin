@@ -6,7 +6,7 @@
                 <option value="${aNode}" selected="true">${aNode}</option>
             </j:forEach>
         </select>
-        <f:entry title="${%Node name delimiter}">
+        <f:entry title="${%NodeDelimiter}">
             <f:textbox name="it.nodeDelimiter" value="${it.nodeDelimiter}"/>
         </f:entry>
     </f:entry>

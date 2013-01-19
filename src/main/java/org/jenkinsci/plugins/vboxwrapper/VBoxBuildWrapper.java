@@ -1,4 +1,4 @@
-package org.jenkinsci.plugins;
+package org.jenkinsci.plugins.vboxwrapper;
 
 import hudson.Extension;
 import hudson.Launcher;
@@ -28,7 +28,7 @@ import java.util.concurrent.*;
  * <p/>
  * When the user configures the project and enables this builder,
  * {@link DescriptorImpl#newInstance(StaplerRequest)} is invoked and a new
- * {@link VBoxWrapper} is created. The created instance is persisted to the
+ * {@link VBoxBuildWrapper} is created. The created instance is persisted to the
  * project configuration XML by using XStream, so this allows you to use
  * instance fields to remember the configuration.
  *
@@ -36,7 +36,7 @@ import java.util.concurrent.*;
  */
 
 @SuppressWarnings("rawtypes")
-public class VBoxWrapper extends BuildWrapper {
+public class VBoxBuildWrapper extends BuildWrapper {
 
     /* Initial timeout */
     private static final int CONNECT_TIMEOUT = 45;
@@ -50,8 +50,8 @@ public class VBoxWrapper extends BuildWrapper {
     private final boolean useTeardown;
 
     @DataBoundConstructor
-    public VBoxWrapper(List<String> virtualSlaves, boolean useSetup,
-                       boolean useTeardown) {
+    public VBoxBuildWrapper(List<String> virtualSlaves, boolean useSetup,
+                            boolean useTeardown) {
         this.virtualSlaves = virtualSlaves;
         this.useSetup = useSetup;
         this.useTeardown = useTeardown;
@@ -335,7 +335,7 @@ public class VBoxWrapper extends BuildWrapper {
     }
 
     /**
-     * Descriptor for {@link VBoxWrapper}. Used as a singleton. The class is
+     * Descriptor for {@link VBoxBuildWrapper}. Used as a singleton. The class is
      * marked as public so that it can be accessed from views.
      */
     @Extension
