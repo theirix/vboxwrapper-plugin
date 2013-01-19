@@ -1,3 +1,5 @@
+[![Build Status](https://buildhive.cloudbees.com/job/jenkinsci/job/vboxwrapper-plugin/badge/icon)](https://buildhive.cloudbees.com/job/jenkinsci/job/vboxwrapper-plugin/)
+
 VBoxWrapper plugin for Jenkins
 ==============================
 
