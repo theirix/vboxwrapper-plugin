@@ -3,7 +3,7 @@
     <f:entry title="${%VirtualNodes}">
         <j:invokeStatic className="org.jenkinsci.plugins.vboxwrapper.VBoxUtils" method="getSlaveNames"
                         var="allNodes"/>
-        <select name="virtualSlaves" multiple="multiple" size="1+${allNodes.size()}" style="min-width: 200px;">
+        <select name="virtualSlaves" multiple="multiple" size="5" style="min-width: 200px;">
             <j:forEach var="aNode" items="${allNodes}" varStatus="loop">
                 <j:choose>
                     <j:when test="${instance.virtualSlaves.contains(aNode)}">

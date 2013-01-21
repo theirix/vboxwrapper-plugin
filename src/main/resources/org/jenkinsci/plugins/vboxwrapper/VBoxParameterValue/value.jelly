@@ -1,7 +1,7 @@
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
 
     <f:entry title="${it.name}" description="${it.description}">
-        <select name="nodes" multiple="multiple" size="1+${it.nodes.size()}" style="min-width: 200px;">
+        <select name="nodes" multiple="multiple" size="5" style="min-width: 200px;">
             <j:forEach var="aNode" items="${it.nodes}" varStatus="loop">
                 <option value="${aNode}" selected="true">${aNode}</option>
             </j:forEach>

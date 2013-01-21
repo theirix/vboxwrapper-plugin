@@ -8,7 +8,7 @@
 
             <j:invokeStatic className="org.jenkinsci.plugins.vboxwrapper.VBoxUtils" method="getSlaveNames"
                             var="allNodes"/>
-            <select name="nodes" multiple="multiple" size="1+${allNodes.size()}" style="min-width: 200px;">
+            <select name="nodes" multiple="multiple" size="5" style="min-width: 200px;">
                 <j:forEach var="aNode" items="${allNodes}" varStatus="loop">
                     <option value="${aNode}">${aNode}</option>
                 </j:forEach>
