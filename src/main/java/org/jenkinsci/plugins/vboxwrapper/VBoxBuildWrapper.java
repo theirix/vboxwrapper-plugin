@@ -8,9 +8,7 @@ import hudson.model.BuildListener;
 import hudson.model.Computer;
 import hudson.slaves.OfflineCause;
 import hudson.slaves.SlaveComputer;
-import hudson.tasks.BuildWrapper;
-import hudson.tasks.BuildWrapperDescriptor;
-import hudson.tasks.Shell;
+import hudson.tasks.*;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -20,6 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.*;
 
 /**
@@ -136,8 +135,10 @@ public class VBoxBuildWrapper extends BuildWrapper {
         }
         String commandLine = sb.toString();
         listener.getLogger().println("Expect to launch command " + commandLine);
-        Shell shell = new Shell(commandLine);
-        if (!shell.perform(build, launcher, listener))
+
+        boolean isWindows = System.getProperty("os.name").toLowerCase(Locale.ENGLISH).contains("windows");
+        CommandInterpreter interpreter = isWindows ? new BatchFile(commandLine) : new Shell(commandLine);
+        if (!interpreter.perform(build, launcher, listener))
             listener.error("VBox setup shell failed");
     }
 
